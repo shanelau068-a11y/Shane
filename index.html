@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>阿彦的消防车绘画小课堂</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="hero">
+        <h1>🚒 阿彦的消防车绘画小课堂</h1>
+        <p>跟着步骤慢慢画，先画大形状，再补细节，你一定可以画得很棒！</p>
+      </header>
+
+      <section class="panel">
+        <h2>第一部分：分步骤学画消防车</h2>
+        <ol id="steps" class="steps"></ol>
+        <div class="step-actions">
+          <button id="prevStep">⬅️ 上一步</button>
+          <button id="nextStep">下一步 ➡️</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>第二部分：在画板上练习</h2>
+        <div class="toolbar">
+          <label>
+            颜色
+            <input id="colorPicker" type="color" value="#ef4444" />
+          </label>
+          <label>
+            画笔粗细
+            <input id="sizePicker" type="range" min="2" max="24" value="6" />
+          </label>
+          <button id="toggleGuide">显示/隐藏消防车轮廓</button>
+          <button id="undoBtn">撤销</button>
+          <button id="clearBtn">清空</button>
+        </div>
+        <canvas id="drawingCanvas" width="900" height="520" aria-label="绘画练习画板"></canvas>
+      </section>
+
+      <section class="panel tips">
+        <h2>第三部分：绘画小口诀</h2>
+        <ul>
+          <li>先方后圆：先画车身和梯子，再画车轮。</li>
+          <li>先大后小：先画大轮廓，再画门把手、车灯。</li>
+          <li>慢慢画线：画得慢一点，线条会更稳。</li>
+          <li>多夸自己：每画完一次都说“阿彦真棒！”</li>
+        </ul>
+      </section>
+
+      <section class="panel share">
+        <h2>手机打开与微信分享</h2>
+        <ol>
+          <li>先把这个页面部署到公开网址（HTTPS），比如 GitHub Pages、Vercel 或 Netlify。</li>
+          <li>在手机微信里把网址发给朋友，对方点开就能直接使用。</li>
+          <li>不能直接把 <code>index.html</code> 文件发到微信里打开，必须先变成在线链接。</li>
+        </ol>
+      </section>
+
+      <section class="panel gallery-panel">
+        <h2>阿彦作品墙（把小朋友画的图加进来）</h2>
+        <p>点击“选择图片”后可一次添加多张作品，支持在手机里直接选相册照片。</p>
+        <div class="gallery-actions">
+          <label class="upload-btn">
+            📷 选择图片
+            <input id="galleryInput" type="file" accept="image/*" multiple />
+          </label>
+          <button id="clearGalleryBtn" type="button">清空作品墙</button>
+        </div>
+        <div id="galleryGrid" class="gallery-grid" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
