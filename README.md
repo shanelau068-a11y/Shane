@@ -39,3 +39,10 @@ Set JPEG quality from 1 to 100:
 ```bash
 python3 convert_heic_to_jpeg.py /path/to/your/folder --quality 90
 ```
+
+
+Delete original HEIC files after successful conversion:
+
+```bash
+python3 convert_heic_to_jpeg.py /path/to/your/folder --delete
+```

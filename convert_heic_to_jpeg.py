@@ -41,6 +41,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Overwrite an existing JPEG output file if it already exists.",
     )
     parser.add_argument(
+        "--delete",
+        action="store_true",
+        help="Delete the original HEIC file after it is successfully converted.",
+    )
+    parser.add_argument(
         "--quality",
         type=int,
         default=95,
@@ -133,6 +138,14 @@ def main() -> int:
         if result == "converted":
             converted += 1
             print(f"CONVERTED: {source} -> {destination}")
+            if args.delete:
+                try:
+                    source.unlink()
+                except Exception as exc:
+                    failed += 1
+                    print(f"FAILED TO DELETE: {source} ({exc})")
+                else:
+                    print(f"DELETED: {source}")
         else:
             skipped += 1
             print(f"SKIPPED: {source} -> {destination} already exists")
