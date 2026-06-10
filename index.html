@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>衣柜拉手高清替换工具</title>
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Wardrobe Handle Studio</p>
+          <h1>衣柜门拉手高清替换 APP</h1>
+          <p class="hero-copy">
+            上传样板柜子图和拉手产品图，框选原拉手位置后即可精准替换，导出无水印 3:4 高清电商主图。
+          </p>
+        </div>
+        <div class="hero-card">
+          <span>输出比例</span>
+          <strong>3:4</strong>
+          <small>最高 3000×4000 PNG</small>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <aside class="panel controls" aria-label="操作面板">
+          <div class="step-card">
+            <div class="step-title"><span>1</span>上传图片</div>
+            <label class="upload-box">
+              <input id="cabinetInput" type="file" accept="image/*" />
+              <strong>上传柜子样板图</strong>
+              <small>建议正面或轻微透视的衣柜门照片</small>
+            </label>
+            <label class="upload-box">
+              <input id="handleInput" type="file" accept="image/*" />
+              <strong>上传拉手产品图</strong>
+              <small>支持透明 PNG，白底图可自动去底</small>
+            </label>
+          </div>
+
+          <div class="step-card">
+            <div class="step-title"><span>2</span>精准定位</div>
+            <p class="hint">拖动画布上的蓝色框，或拖动四个角点，让它覆盖原柜门拉手。新拉手会自动贴合这个位置。</p>
+            <div class="grid-two">
+              <label>旋转角度
+                <input id="rotation" type="range" min="-45" max="45" value="0" />
+              </label>
+              <output id="rotationValue">0°</output>
+            </div>
+            <div class="grid-two">
+              <label>拉手缩放
+                <input id="scale" type="range" min="40" max="180" value="100" />
+              </label>
+              <output id="scaleValue">100%</output>
+            </div>
+            <label class="toggle-row">
+              <input id="removeBg" type="checkbox" checked />
+              自动去除拉手白底
+            </label>
+            <label class="toggle-row">
+              <input id="fillOldHandle" type="checkbox" checked />
+              智能覆盖原拉手阴影
+            </label>
+          </div>
+
+          <div class="step-card">
+            <div class="step-title"><span>3</span>导出主图</div>
+            <div class="grid-two">
+              <label>导出尺寸
+                <select id="exportSize">
+                  <option value="1500">1500×2000</option>
+                  <option value="2250">2250×3000</option>
+                  <option value="3000" selected>3000×4000</option>
+                </select>
+              </label>
+              <button id="downloadBtn" class="primary" type="button">下载 PNG</button>
+            </div>
+            <button id="resetBtn" class="ghost" type="button">重置定位框</button>
+          </div>
+        </aside>
+
+        <section class="stage-card">
+          <div class="toolbar">
+            <div>
+              <strong>实时预览</strong>
+              <span id="statusText">请先上传柜子图片</span>
+            </div>
+            <button id="fitBtn" type="button">适配画面</button>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="editorCanvas" width="900" height="1200" aria-label="衣柜拉手替换画布"></canvas>
+          </div>
+          <div class="tips">
+            <span>提示：产品图若不是透明 PNG，请勾选“自动去除拉手白底”。</span>
+            <span>导出图只包含合成结果，不含界面元素和水印。</span>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="src/app.js" defer></script>
+  </body>
+</html>
