@@ -1,0 +1,17 @@
+{
+  "name": "wardrobe-handle-replacer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "电商衣柜门拉手替换与 3:4 高清出图工具",
+  "scripts": {
+    "start": "python3 -m http.server 4173",
+    "check": "node --check src/app.js"
+  },
+  "keywords": [
+    "wardrobe",
+    "handle",
+    "ecommerce",
+    "canvas"
+  ],
+  "license": "UNLICENSED"
+}
