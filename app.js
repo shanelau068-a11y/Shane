@@ -1,6 +1,5 @@
 const N = 9;
 const CLASSIC_COLLECTION = "Maeda Nobuaki · Newly Selected Tsumego 100 Problems for 1–8k";
-const CLASSIC_SOURCE = "https://raw.githubusercontent.com/sanderland/tsumego/master/problems/1b.%20Tsumego%20Intermediate/Maeda%20Nobuaki%20Newly%20Selected%20Tsumego%20100%20Problems%20For%201-8k/";
 const problems = [
   { type: "吃子", title: "最后一口气", text: "轮到黑棋。点在白棋最后一口气上，把它吃掉！", tip: "棋子上下左右相邻的空点叫作“气”。没有气的棋子会被提走。", black: [[4,3],[3,4],[5,4]], white: [[4,4]], answers: [[4,5]] },
   { type: "连接", title: "把伙伴连起来", text: "轮到黑棋。两颗黑棋快要分开了，落在哪里可以连接它们？", tip: "相邻的同色棋子是一块棋，它们共享所有的气。", black: [[3,4],[5,4]], white: [[4,3],[4,5]], answers: [[4,4]] },
@@ -99,59 +98,34 @@ function sourcePoint(point) {
   return [point.charCodeAt(0) - 97, point.charCodeAt(1) - 97];
 }
 
-function adaptClassicProblem(data, number) {
-  const solutions = (data.SOL || []).filter(line => line[1] && /^[a-s]{2}$/.test(line[1]));
+function adaptClassicProblem(data) {
+  const solutions = (data.s || []).filter(line => line[1] && /^[a-s]{2}$/.test(line[1]));
   const answers = [...new Set(solutions.map(line => line[1]))].map(sourcePoint);
   if (!answers.length) return null;
   const turn = solutions[0][0] === "W" ? "white" : "black";
   return {
-    type: "经典死活",
-    title: `前田信吾死活题 · ${String(number).padStart(3, "0")}`,
+    type: data.l === "advanced" ? "经典死活 · 高级" : "经典死活 · 中级",
+    title: `${data.c || CLASSIC_COLLECTION} · ${String(data.n).padStart(3, "0")}`,
     text: `${turn === "black" ? "黑棋" : "白棋"}先走。请找出这道经典死活题的第一手。`,
     tip: "先不要急着落子：数气、找眼位、判断对方最强的抵抗。",
-    black: (data.AB || []).map(sourcePoint),
-    white: (data.AW || []).map(sourcePoint),
+    black: (data.b || []).map(sourcePoint),
+    white: (data.w || []).map(sourcePoint),
     answers,
     answerColor: turn,
-    size: Number(data.SZ) || 19,
-    source: `经典题库：${CLASSIC_COLLECTION}（题 ${String(number).padStart(3, "0")}；来源 sanderland/tsumego，MIT License）`
+    size: 19,
+    source: `内置经典题库：${data.c || CLASSIC_COLLECTION}（题 ${String(data.n).padStart(3, "0")}；来源 sanderland/tsumego，MIT License）`
   };
 }
 
-async function loadClassicCollection() {
-  sourceNote.textContent = "正在载入 100 道经典中级死活题…";
-  try {
-    const results = new Array(100);
-    let cursor = 0;
-    async function fetchOne(number) {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const response = await fetch(`${CLASSIC_SOURCE}${String(number).padStart(3, "0")}.json`);
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          return adaptClassicProblem(await response.json(), number);
-        } catch (error) {
-          if (attempt === 2) throw new Error(`题 ${number} 无法读取：${error.message}`);
-          await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
-        }
-      }
-    }
-    async function worker() {
-      while (cursor < 100) {
-        const index = cursor++;
-        results[index] = await fetchOne(index + 1);
-        sourceNote.textContent = `正在载入经典题库：${index + 1} / 100`;
-      }
-    }
-    await Promise.all(Array.from({ length: 5 }, worker));
-    const classics = results.filter(Boolean);
-    if (classics.length !== 100) throw new Error("题库数据不完整");
-    problems.push(...classics);
-    current = Math.min(current, problems.length - 1);
-    render();
-  } catch (error) {
-    sourceNote.textContent = "经典题库暂时无法载入；请检查网络后刷新页面。";
-    console.error(error);
+function installClassicCollection() {
+  const classics = (window.CLASSIC_PROBLEMS || []).map(adaptClassicProblem).filter(Boolean);
+  if (classics.length !== 600) {
+    sourceNote.textContent = "内置题库文件不完整，请刷新页面。";
+    return;
   }
+  problems.push(...classics);
+  current = Math.min(current, problems.length - 1);
+  render();
 }
 
-loadClassicCollection();
+installClassicCollection();
