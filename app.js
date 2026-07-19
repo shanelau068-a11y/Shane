@@ -129,3 +129,5 @@ function installClassicCollection() {
 }
 
 installClassicCollection();
+
+window.renderPuzzleMode = render;

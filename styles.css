@@ -7,6 +7,11 @@ header, .progress-copy, .hint-row { display: flex; align-items: center; justify-
 h1 { margin: 2px 0 0; font-size: clamp(28px, 6vw, 38px); letter-spacing: .03em; }
 .eyebrow { margin: 0; color: #94704a; font-size: 14px; }
 .text-button { border: 0; background: transparent; color: #8a6240; text-decoration: underline; padding: 8px 0; white-space: nowrap; }
+.mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 22px 0 10px; padding: 5px; background: #ead7bb; border-radius: 15px; }
+.mode-switch button { border: 0; border-radius: 11px; padding: 11px; background: transparent; color: #79583c; font-weight: 800; }
+.mode-switch button.active { background: #fffaf1; color: #b75a24; box-shadow: 0 3px 10px #6b3d1820; }
+.quick-tools { display: flex; justify-content: flex-end; margin: 0 2px 8px; }
+.quick-tools button { border: 1px solid #dfc29a; border-radius: 99px; background: #fffaf1; color: #765033; padding: 7px 12px; font-size: 13px; font-weight: 700; }
 .progress-card, .tip-card { background: #fff; border-radius: 18px; padding: 16px 18px; box-shadow: 0 5px 18px #7d54251c; }
 .progress-card { margin: 24px 0; }
 .progress-copy strong { color: #c1781e; }
@@ -26,11 +31,21 @@ h2 { margin: 12px 0 7px; font-size: 26px; }
 .point.correct::before { content: "✓"; position: absolute; z-index: 2; color: #fff; font-size: clamp(14px, 3vw, 23px); font-weight: 900; left: 32%; top: 18%; text-shadow: 0 1px 2px #000; }
 .board.large-board .point::after { width: 92%; height: 92%; left: 4%; top: 4%; }
 .board.large-board .point.correct::before { font-size: clamp(10px, 2vw, 16px); left: 26%; top: 12%; }
+.board.ai-board .point { cursor: pointer; }
+.board.ai-board .point.ai-empty:hover::after { background: #2228; transform: scale(.62); box-shadow: none; }
+.board.ai-board .point.ai-thinking { cursor: wait; }
+.board.ai-board .point.last-ai::before { content: ""; position: absolute; z-index: 3; width: 22%; height: 22%; left: 39%; top: 39%; border-radius: 50%; background: #e04b32; box-shadow: 0 0 0 2px #fff8; }
+.board.ai-board .point.last-human::before { content: ""; position: absolute; z-index: 3; width: 20%; height: 20%; left: 40%; top: 40%; border-radius: 50%; border: 2px solid #e04b32; }
+.board.ai-board .hoshi { position: absolute; z-index: 1; width: 12%; height: 12%; left: 44%; top: 44%; border-radius: 50%; background: #6f4828; pointer-events: none; }
 .hint-row { margin: 22px auto 10px; max-width: 510px; }
 .primary-button, .secondary-button { border-radius: 12px; padding: 12px 17px; font-weight: 700; border: 0; }
 .primary-button { background: #d9672c; color: #fff; box-shadow: 0 3px 0 #a94a1c; }
 .primary-button:disabled { background: #d5c6b8; box-shadow: none; cursor: default; }
 .secondary-button { background: #fff; color: #7f5c3d; border: 1px solid #e7cba4; }
+.ai-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px auto 10px; max-width: 510px; padding: 12px; border: 1px solid #e7cba4; border-radius: 15px; background: #fffaf2; }
+.ai-actions label { display: flex; align-items: center; justify-content: space-between; gap: 7px; color: #725238; font-size: 14px; font-weight: 700; }
+.ai-actions select { min-width: 88px; border: 1px solid #d9b98b; border-radius: 9px; padding: 8px; background: #fff; color: #523720; }
+.ai-game-info { max-width: 510px; margin: 10px auto; padding: 10px 13px; border-radius: 11px; background: #fff0c9; color: #70451f; text-align: center; font-size: 14px; font-weight: 700; }
 .message { min-height: 26px; text-align: center; color: #725945; font-weight: 700; }
 .message.success { color: #17703c; }
 .message.error { color: #b33c2e; }
@@ -38,4 +53,5 @@ h2 { margin: 12px 0 7px; font-size: 26px; }
 .tip-card h3 { margin: 0 0 7px; font-size: 17px; }
 .tip-card p { margin: 0; color: #705c4e; line-height: 1.65; }
 .source-note { margin: 14px 6px 0; color: #8b755f; font-size: 12px; line-height: 1.5; text-align: center; }
+.hidden { display: none !important; }
 @media (max-width: 390px) { .app-shell { padding: 20px 14px 32px; } .board { border-width: 7px; } }

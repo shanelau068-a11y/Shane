@@ -17,7 +17,16 @@
         <button class="text-button" id="reset-progress" type="button">重新开始</button>
       </header>
 
-      <section class="progress-card" aria-label="闯关进度">
+      <nav class="mode-switch" aria-label="练习模式">
+        <button id="puzzle-mode" class="active" type="button">闯关题库</button>
+        <button id="ai-mode" type="button">人机对弈</button>
+      </nav>
+
+      <div class="quick-tools">
+        <button id="go-sound-toggle" type="button" aria-pressed="true">🔊 声音开</button>
+      </div>
+
+      <section id="progress-card" class="progress-card" aria-label="闯关进度">
         <div class="progress-copy"><span id="progress-label">第 1 / 8 关</span><strong id="stars">⭐ 0</strong></div>
         <div class="progress-track"><div id="progress-bar"></div></div>
       </section>
@@ -32,10 +41,28 @@
         <div id="board" class="board" role="grid" aria-label="围棋棋盘"></div>
       </section>
 
-      <section class="hint-row">
+      <section id="puzzle-actions" class="hint-row">
         <button class="secondary-button" id="hint-button" type="button">💡 看提示</button>
         <button class="primary-button" id="next-button" type="button" disabled>下一关 →</button>
       </section>
+
+      <section id="ai-actions" class="ai-actions hidden" aria-label="人机对弈设置">
+        <label>棋盘
+          <select id="go-board-size">
+            <option value="9" selected>9 路</option>
+            <option value="13">13 路（较慢）</option>
+          </select>
+        </label>
+        <label>电脑
+          <select id="go-ai-level">
+            <option value="2500" selected>认真</option>
+            <option value="5000">挑战</option>
+          </select>
+        </label>
+        <button id="go-pass" class="secondary-button" type="button">停一手</button>
+        <button id="go-new-game" class="primary-button" type="button">新对局</button>
+      </section>
+      <p id="ai-game-info" class="ai-game-info hidden"></p>
       <p id="message" class="message" aria-live="assertive">请选择一个交叉点落子。</p>
 
       <section class="tip-card">
@@ -51,5 +78,6 @@
     <script src="classic-batch-5.js"></script>
     <script src="classic-batch-6.js"></script>
     <script src="app.js"></script>
+    <script src="go-ai.js"></script>
   </body>
 </html>
