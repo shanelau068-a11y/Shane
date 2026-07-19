@@ -106,7 +106,7 @@ function adaptClassicProblem(data, number) {
   const turn = solutions[0][0] === "W" ? "white" : "black";
   return {
     type: "经典死活",
-    title: `马田伸吾死活题 · ${String(number).padStart(3, "0")}`,
+    title: `前田信吾死活题 · ${String(number).padStart(3, "0")}`,
     text: `${turn === "black" ? "黑棋" : "白棋"}先走。请找出这道经典死活题的第一手。`,
     tip: "先不要急着落子：数气、找眼位、判断对方最强的抵抗。",
     black: (data.AB || []).map(sourcePoint),
