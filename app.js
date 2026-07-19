@@ -1,4 +1,6 @@
 const N = 9;
+const CLASSIC_COLLECTION = "Maeda Nobuaki · Newly Selected Tsumego 100 Problems for 1–8k";
+const CLASSIC_SOURCE = "https://raw.githubusercontent.com/sanderland/tsumego/master/problems/1b.%20Tsumego%20Intermediate/Maeda%20Nobuaki%20Newly%20Selected%20Tsumego%20100%20Problems%20For%201-8k/";
 const problems = [
   { type: "吃子", title: "最后一口气", text: "轮到黑棋。点在白棋最后一口气上，把它吃掉！", tip: "棋子上下左右相邻的空点叫作“气”。没有气的棋子会被提走。", black: [[4,3],[3,4],[5,4]], white: [[4,4]], answers: [[4,5]] },
   { type: "连接", title: "把伙伴连起来", text: "轮到黑棋。两颗黑棋快要分开了，落在哪里可以连接它们？", tip: "相邻的同色棋子是一块棋，它们共享所有的气。", black: [[3,4],[5,4]], white: [[4,3],[4,5]], answers: [[4,4]] },
@@ -48,6 +50,7 @@ let passed = false;
 const el = id => document.getElementById(id);
 const board = el("board"), message = el("message"), next = el("next-button");
 const key = ([x,y]) => `${x},${y}`;
+const sourceNote = el("source-note");
 
 function render() {
   const p = problems[current]; passed = false; next.disabled = true;
@@ -55,13 +58,18 @@ function render() {
   el("problem-title").textContent = p.title;
   el("problem-text").textContent = p.text;
   el("tip-text").textContent = p.tip;
+  sourceNote.textContent = p.source || "题目：自编入门练习";
   el("progress-label").textContent = `第 ${current + 1} / ${problems.length} 关`;
   el("stars").textContent = `⭐ ${solved.size}`;
   el("progress-bar").style.width = `${Math.max(12.5, (solved.size / problems.length) * 100)}%`;
   message.className = "message"; message.textContent = "请选择一个交叉点落子。";
   board.innerHTML = "";
+  const size = p.size || N;
+  board.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+  board.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+  board.classList.toggle("large-board", size > N);
   const blacks = new Set(p.black.map(key)), whites = new Set(p.white.map(key));
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
     const cell = document.createElement("button"); cell.type = "button"; cell.className = "point";
     const pos = [x,y];
     if (blacks.has(key(pos))) cell.classList.add("black");
@@ -74,7 +82,7 @@ function choose(pos, cell) {
   if (passed) return;
   const correct = problems[current].answers.some(a => key(a) === key(pos));
   if (correct) {
-    passed = true; cell.classList.remove("choice"); cell.classList.add("black", "correct");
+    passed = true; cell.classList.remove("choice"); cell.classList.add(problems[current].answerColor || "black", "correct");
     solved.add(current); localStorage.setItem("go-kids-solved", JSON.stringify([...solved]));
     localStorage.setItem("go-kids-level", String(current));
     message.className = "message success"; message.textContent = current === problems.length - 1 ? `太棒了！你完成了全部 ${problems.length} 关！` : "答对啦！这一关通过。";
@@ -86,3 +94,64 @@ el("hint-button").addEventListener("click", () => { const a = problems[current].
 next.addEventListener("click", () => { current = (current + 1) % problems.length; localStorage.setItem("go-kids-level", String(current)); render(); });
 el("reset-progress").addEventListener("click", () => { if (confirm("确定重新开始吗？闯关星星会清零。")) { solved = new Set(); current = 0; localStorage.removeItem("go-kids-solved"); localStorage.setItem("go-kids-level", "0"); render(); } });
 render();
+
+function sourcePoint(point) {
+  return [point.charCodeAt(0) - 97, point.charCodeAt(1) - 97];
+}
+
+function adaptClassicProblem(data, number) {
+  const solutions = (data.SOL || []).filter(line => line[1] && /^[a-s]{2}$/.test(line[1]));
+  const answers = [...new Set(solutions.map(line => line[1]))].map(sourcePoint);
+  if (!answers.length) return null;
+  const turn = solutions[0][0] === "W" ? "white" : "black";
+  return {
+    type: "经典死活",
+    title: `马田伸吾死活题 · ${String(number).padStart(3, "0")}`,
+    text: `${turn === "black" ? "黑棋" : "白棋"}先走。请找出这道经典死活题的第一手。`,
+    tip: "先不要急着落子：数气、找眼位、判断对方最强的抵抗。",
+    black: (data.AB || []).map(sourcePoint),
+    white: (data.AW || []).map(sourcePoint),
+    answers,
+    answerColor: turn,
+    size: Number(data.SZ) || 19,
+    source: `经典题库：${CLASSIC_COLLECTION}（题 ${String(number).padStart(3, "0")}；来源 sanderland/tsumego，MIT License）`
+  };
+}
+
+async function loadClassicCollection() {
+  sourceNote.textContent = "正在载入 100 道经典中级死活题…";
+  try {
+    const results = new Array(100);
+    let cursor = 0;
+    async function fetchOne(number) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const response = await fetch(`${CLASSIC_SOURCE}${String(number).padStart(3, "0")}.json`);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return adaptClassicProblem(await response.json(), number);
+        } catch (error) {
+          if (attempt === 2) throw new Error(`题 ${number} 无法读取：${error.message}`);
+          await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
+        }
+      }
+    }
+    async function worker() {
+      while (cursor < 100) {
+        const index = cursor++;
+        results[index] = await fetchOne(index + 1);
+        sourceNote.textContent = `正在载入经典题库：${index + 1} / 100`;
+      }
+    }
+    await Promise.all(Array.from({ length: 5 }, worker));
+    const classics = results.filter(Boolean);
+    if (classics.length !== 100) throw new Error("题库数据不完整");
+    problems.push(...classics);
+    current = Math.min(current, problems.length - 1);
+    render();
+  } catch (error) {
+    sourceNote.textContent = "经典题库暂时无法载入；请检查网络后刷新页面。";
+    console.error(error);
+  }
+}
+
+loadClassicCollection();
