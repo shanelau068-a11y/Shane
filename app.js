@@ -106,7 +106,7 @@ function adaptClassicProblem(data) {
   const turn = solutions[0][0] === "W" ? "white" : "black";
   return {
     type: data.l === "advanced" ? "经典死活 · 高级" : "经典死活 · 中级",
-    title: `${data.c || CLASSIC_COLLECTION} · ${String(data.n).padStart(3, "0")}`,
+    title: `经典死活题 · 第 ${String(data.n).padStart(3, "0")} 题`,
     text: `${turn === "black" ? "黑棋" : "白棋"}先走。请找出这道经典死活题的第一手。`,
     tip: "先不要急着落子：数气、找眼位、判断对方最强的抵抗。",
     black: (data.b || []).map(sourcePoint),
@@ -114,7 +114,7 @@ function adaptClassicProblem(data) {
     answers,
     answerColor: turn,
     size: 19,
-    source: `内置经典题库：${data.c || CLASSIC_COLLECTION}（题 ${String(data.n).padStart(3, "0")}；来源 sanderland/tsumego，MIT License）`
+    source: `内置经典死活题库 · 第 ${String(data.n).padStart(3, "0")} 题（来源：sanderland/tsumego，MIT License）`
   };
 }
 
