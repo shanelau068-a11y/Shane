@@ -112,21 +112,37 @@ function sourcePoint(point) {
   return [point.charCodeAt(0) - 97, point.charCodeAt(1) - 97];
 }
 
+function compactClassicBoard(black, white, answers) {
+  const points = [...black, ...white, ...answers];
+  const xs = points.map(([x]) => x), ys = points.map(([, y]) => y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const offset = (min, max) => {
+    const span = max - min + 1;
+    if (min === 0) return 0;
+    if (max === 18) return 13 - span;
+    return Math.floor((13 - span) / 2) - min;
+  };
+  const dx = offset(minX, maxX), dy = offset(minY, maxY);
+  const move = ([x, y]) => [x + dx, y + dy];
+  return { black: black.map(move), white: white.map(move), answers: answers.map(move), size: 13 };
+}
+
 function adaptClassicProblem(data) {
   const solutions = (data.s || []).filter(line => line[1] && /^[a-s]{2}$/.test(line[1]));
   const answers = [...new Set(solutions.map(line => line[1]))].map(sourcePoint);
   if (!answers.length) return null;
   const turn = solutions[0][0] === "W" ? "white" : "black";
+  const compact = compactClassicBoard((data.b || []).map(sourcePoint), (data.w || []).map(sourcePoint), answers);
   return {
     type: data.l === "advanced" ? "经典死活 · 高级" : "经典死活 · 中级",
     title: `经典死活题 · 第 ${String(data.n).padStart(3, "0")} 题`,
     text: `${turn === "black" ? "黑棋" : "白棋"}先走。请找出这道经典死活题的第一手。`,
     tip: "先不要急着落子：数气、找眼位、判断对方最强的抵抗。",
-    black: (data.b || []).map(sourcePoint),
-    white: (data.w || []).map(sourcePoint),
-    answers,
+    black: compact.black,
+    white: compact.white,
+    answers: compact.answers,
     answerColor: turn,
-    size: 19,
+    size: compact.size,
     source: `内置经典死活题库 · 第 ${String(data.n).padStart(3, "0")} 题（来源：sanderland/tsumego，MIT License）`
   };
 }
