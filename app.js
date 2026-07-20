@@ -54,6 +54,18 @@ const board = el("board"), message = el("message"), next = el("next-button");
 const key = ([x,y]) => `${x},${y}`;
 const sourceNote = el("source-note");
 
+function renderCoordinates(size) {
+  const columns = el("column-labels"), rows = el("row-labels");
+  columns.innerHTML = ""; rows.innerHTML = "";
+  columns.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+  rows.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+  for (let index = 1; index <= size; index++) {
+    const column = document.createElement("span"), row = document.createElement("span");
+    column.textContent = index; row.textContent = index;
+    columns.append(column); rows.append(row);
+  }
+}
+
 function render() {
   const p = problems[current]; passed = false; next.disabled = true;
   el("level-tag").textContent = `第 ${current + 1} 关 · ${p.type}`;
@@ -67,6 +79,7 @@ function render() {
   message.className = "message"; message.textContent = "请选择一个交叉点落子。";
   board.innerHTML = "";
   const size = p.size || N;
+  renderCoordinates(size);
   board.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
   board.style.gridTemplateRows = `repeat(${size}, 1fr)`;
   board.classList.toggle("large-board", size > N);
@@ -177,4 +190,5 @@ function installClassicCollection() {
 
 installClassicCollection();
 
+window.renderCoordinates = renderCoordinates;
 window.renderPuzzleMode = render;

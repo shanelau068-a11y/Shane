@@ -36,8 +36,17 @@
         <p id="problem-text">轮到黑棋。点在白棋最后一口气上，把它吃掉！</p>
       </section>
 
+      <section class="tip-card">
+        <h3>本关小知识</h3>
+        <p id="tip-text">棋子上下左右相邻的空点叫作“气”。没有气的棋子会被提走。</p>
+      </section>
+
       <section class="board-wrap">
-        <div id="board" class="board" role="grid" aria-label="围棋棋盘"></div>
+        <div class="board-coordinate-shell">
+          <div id="column-labels" class="coordinate-labels columns" aria-hidden="true"></div>
+          <div id="row-labels" class="coordinate-labels rows" aria-hidden="true"></div>
+          <div id="board" class="board" role="grid" aria-label="围棋棋盘"></div>
+        </div>
       </section>
 
       <section id="puzzle-actions" class="hint-row">
@@ -65,10 +74,6 @@
       <p id="message" class="message" aria-live="assertive">请选择一个交叉点落子。</p>
 
       <p id="source-note" class="source-note">题目：自编入门练习</p>
-      <section class="tip-card">
-        <h3>本关小知识</h3>
-        <p id="tip-text">棋子上下左右相邻的空点叫作“气”。没有气的棋子会被提走。</p>
-      </section>
     </main>
     <script src="classic-batch-1.js"></script>
     <script src="classic-batch-2.js"></script>

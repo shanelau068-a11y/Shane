@@ -248,6 +248,7 @@ if(typeof document!=='undefined')(()=>{
   function showScore(){const score=game.calculateScore(),winner=score.winner==='black'?'齐齐（黑棋）':'电脑（白棋）';message.className=`message ${score.winner==='black'?'success':'error'}`;message.textContent=`终局：${winner}胜 ${score.margin.toFixed(1)} 目。黑 ${score.black.toFixed(1)}，白 ${score.white.toFixed(1)}。`;sound('finish');}
   function renderGame(){
     boardEl.innerHTML='';boardEl.classList.add('ai-board');boardEl.classList.toggle('large-board',game.size>9);boardEl.style.gridTemplateColumns=`repeat(${game.size},1fr)`;boardEl.style.gridTemplateRows=`repeat(${game.size},1fr)`;
+    window.renderCoordinates?.(game.size);
     for(let y=0;y<game.size;y++)for(let x=0;x<game.size;x++){
       const cell=document.createElement('button');cell.type='button';cell.className='point';const stone=game.board[y][x];
       if(stone)cell.classList.add(stone);else cell.classList.add('ai-empty');if(thinking)cell.classList.add('ai-thinking');
