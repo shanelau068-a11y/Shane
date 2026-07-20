@@ -97,7 +97,8 @@ class GoGame {
     }
     const center=(this.size-1)/2;score+=Math.max(0,5-(Math.abs(move.x-center)+Math.abs(move.y-center))*.5);
     if(this.moveNumber<10&&(move.x===0||move.y===0||move.x===this.size-1||move.y===this.size-1))score-=18;
-    return score+Math.random()*4;
+    // 排序必须可重复：随机扰动会让同一局面出现“乱下”的观感。
+    return score;
   }
   clone(){
     const game=new GoGame(this.size,this.komi);game.board=this.board.map(r=>r.slice());game.currentPlayer=this.currentPlayer;
@@ -163,7 +164,43 @@ class MCTSNode{
 
 class GoMCTS{
   constructor(playouts=3500,cancelled=()=>false){this.playouts=playouts;this.cancelled=cancelled;}
+  rankedMoves(game,limit){
+    return game.getLegalMoves().map(move=>({move,score:game.moveHeuristic(move)}))
+      .sort((a,b)=>b.score-a.score||a.move.y-b.move.y||a.move.x-b.move.x).slice(0,limit);
+  }
+  evaluate(game,color){
+    const opponent=color==='black'?'white':'black',seen=new Set();let value=(game.captures[color]-game.captures[opponent])*24;
+    for(let y=0;y<game.size;y++)for(let x=0;x<game.size;x++){
+      const stone=game.board[y][x],id=`${x},${y}`;if(!stone||seen.has(id))continue;
+      const group=game.getGroup(x,y);group.group.forEach(([gx,gy])=>seen.add(`${gx},${gy}`));
+      const sign=stone===color?1:-1;
+      value+=sign*group.group.length*2;
+      if(group.liberties===1)value+=sign*90*group.group.length;
+      else if(group.liberties===2)value+=sign*16*group.group.length;
+    }
+    return value;
+  }
+  tacticalSearch(game){
+    const color=game.currentPlayer,span=this.playouts>=5000?18:12,replies=this.playouts>=5000?14:9;
+    let best=null,bestScore=-Infinity;
+    for(const {move} of this.rankedMoves(game,span)){
+      const after=game.clone();after.play(move.x,move.y);let score=this.evaluate(after,color);
+      // 假定对手会选择最有力的反击，而不是随机应手。
+      for(const {move:reply} of this.rankedMoves(after,replies)){
+        const response=after.clone();response.play(reply.x,reply.y);
+        score=Math.min(score,this.evaluate(response,color));
+      }
+      if(score>bestScore){bestScore=score;best=move;}
+    }
+    return best;
+  }
   async search(game){
+    // 先处理无需蒙特卡洛也能确定的强制手：提子、补被打吃的棋。
+    // 这既更像正常对弈，也不会让随机模拟掩盖眼前的一口气。
+    const forcing=game.getLegalMoves().map(move=>({move,score:game.moveHeuristic(move)})).sort((a,b)=>b.score-a.score||a.move.y-b.move.y||a.move.x-b.move.x)[0];
+    if(forcing&&forcing.score>=45)return forcing.move;
+    const tactical=this.tacticalSearch(game);
+    if(tactical)return tactical;
     const root=new MCTSNode(game.clone()),empty=new Int32Array(game.size*game.size),batch=80;
     for(let done=0;done<this.playouts;done+=batch){
       if(this.cancelled())return null;const end=Math.min(done+batch,this.playouts);
@@ -222,7 +259,7 @@ if(typeof document!=='undefined')(()=>{
     const last=game.lastMove?`${game.lastMove.color==='white'?'电脑':'齐齐'}刚下在 ${coord(game.lastMove.x,game.lastMove.y)}`:'尚未落子';
     $('ai-game-info').textContent=`黑提子 ${game.captures.black} · 白提子 ${game.captures.white} · ${last}`;
     $('level-tag').textContent=`人机对弈 · ${game.size} 路棋盘`;$('problem-title').textContent=game.gameOver?'本局结束':thinking?'电脑正在思考…':'齐齐执黑棋';
-    $('problem-text').textContent='红色圆点标出刚才的一手；双方连续停一手后数目。';$('tip-text').textContent='电脑会计算提子、打吃、连接和地盘。先照顾弱棋，再寻找对方的断点。';$('source-note').textContent='本地蒙特卡洛围棋引擎，不连接外部服务。';
+    $('problem-text').textContent='红色圆点标出刚才的一手；双方连续停一手后数目。';$('tip-text').textContent='电脑会优先处理提子、打吃和被攻击的弱棋，再用两层战术搜索选择能承受反击的一手。';$('source-note').textContent='本地战术搜索围棋引擎，不连接外部服务。';
   }
   async function computerMove(){
     if(mode!=='ai'||game.gameOver||game.currentPlayer!=='white')return;thinking=true;const token=++searchToken;message.className='message';message.textContent='电脑正在认真计算，请稍等…';renderGame();

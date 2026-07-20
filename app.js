@@ -1,6 +1,8 @@
 const N = 9;
 const CLASSIC_COLLECTION = "Maeda Nobuaki · Newly Selected Tsumego 100 Problems for 1–8k";
-const problems = [
+// 旧版的自编入门题包含重复题，且有一道把真眼误标为“破眼”。
+// 闯关从经过来源标注的经典死活题开始，避免把错误形状教给孩子。
+const legacyProblems = [
   { type: "吃子", title: "最后一口气", text: "轮到黑棋。点在白棋最后一口气上，把它吃掉！", tip: "棋子上下左右相邻的空点叫作“气”。没有气的棋子会被提走。", black: [[4,3],[3,4],[5,4]], white: [[4,4]], answers: [[4,5]] },
   { type: "连接", title: "把伙伴连起来", text: "轮到黑棋。两颗黑棋快要分开了，落在哪里可以连接它们？", tip: "相邻的同色棋子是一块棋，它们共享所有的气。", black: [[3,4],[5,4]], white: [[4,3],[4,5]], answers: [[4,4]] },
   { type: "吃子", title: "角上的白棋", text: "轮到黑棋。角上的白棋只剩一口气，找出来！", tip: "棋盘边和角会减少棋子的气，所以角上的棋更容易被吃。", black: [[1,0],[0,1],[2,1]], white: [[1,1]], answers: [[1,2]] },
@@ -40,6 +42,7 @@ const problems = [
   { type: "综合", title: "三步前的第一手", text: "轮到黑棋。先吃掉白棋的要害一子，再考虑后续。", tip: "难题也从数气开始：先找到最紧急的棋块。", black: [[3,2],[2,3],[4,3]], white: [[3,3]], answers: [[3,4]] },
   { type: "综合", title: "闯关毕业题", text: "轮到黑棋。白棋中央一块只剩最后一口气，稳稳地吃掉它！", tip: "恭喜！先观察棋块、再数气、最后确认自己的棋也安全。", black: [[3,4],[4,3],[5,4],[3,5],[5,5]], white: [[4,4]], answers: [[4,5]] }
 ];
+const problems = [];
 
 let current = Number(localStorage.getItem("go-kids-level") || 0);
 let solved = new Set(JSON.parse(localStorage.getItem("go-kids-solved") || "[]"));
@@ -92,8 +95,6 @@ function choose(pos, cell) {
 el("hint-button").addEventListener("click", () => { const a = problems[current].answers[0]; message.className = "message"; message.textContent = `提示：试试第 ${a[0] + 1} 列、第 ${a[1] + 1} 行的交叉点。`; });
 next.addEventListener("click", () => { current = (current + 1) % problems.length; localStorage.setItem("go-kids-level", String(current)); render(); });
 el("reset-progress").addEventListener("click", () => { if (confirm("确定重新开始吗？闯关星星会清零。")) { solved = new Set(); current = 0; localStorage.removeItem("go-kids-solved"); localStorage.setItem("go-kids-level", "0"); render(); } });
-render();
-
 function sourcePoint(point) {
   return [point.charCodeAt(0) - 97, point.charCodeAt(1) - 97];
 }
@@ -117,14 +118,60 @@ function adaptClassicProblem(data) {
   };
 }
 
+function isLegalFirstMove(problem) {
+  const occupied = new Set([...problem.black, ...problem.white].map(key));
+  if (problem.black.length + problem.white.length !== occupied.size) return false;
+  const [x, y] = problem.answers[0] || [];
+  if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= problem.size || y >= problem.size) return false;
+  if (occupied.has(key([x, y]))) return false;
+  const grid = Array.from({ length: problem.size }, () => Array(problem.size).fill(null));
+  problem.black.forEach(([px, py]) => { grid[py][px] = "black"; });
+  problem.white.forEach(([px, py]) => { grid[py][px] = "white"; });
+  const neighbors = (px, py) => [[px - 1, py], [px + 1, py], [px, py - 1], [px, py + 1]]
+    .filter(([nx, ny]) => nx >= 0 && ny >= 0 && nx < problem.size && ny < problem.size);
+  const group = (sx, sy) => {
+    const color = grid[sy][sx], stones = [], liberties = new Set(), seen = new Set([key([sx, sy])]), stack = [[sx, sy]];
+    while (stack.length) {
+      const [px, py] = stack.pop(); stones.push([px, py]);
+      neighbors(px, py).forEach(([nx, ny]) => {
+        const point = key([nx, ny]);
+        if (!grid[ny][nx]) liberties.add(point);
+        else if (grid[ny][nx] === color && !seen.has(point)) { seen.add(point); stack.push([nx, ny]); }
+      });
+    }
+    return { stones, liberties };
+  };
+  const color = problem.answerColor || "black", opponent = color === "black" ? "white" : "black";
+  grid[y][x] = color;
+  const checked = new Set();
+  neighbors(x, y).forEach(([nx, ny]) => {
+    if (grid[ny][nx] !== opponent || checked.has(key([nx, ny]))) return;
+    const enemy = group(nx, ny); enemy.stones.forEach(point => checked.add(key(point)));
+    if (!enemy.liberties.size) enemy.stones.forEach(([ex, ey]) => { grid[ey][ex] = null; });
+  });
+  return group(x, y).liberties.size > 0;
+}
+
+function positionSignature(problem) {
+  const encode = points => points.map(key).sort().join(";");
+  return `${problem.answerColor}|${encode(problem.black)}|${encode(problem.white)}|${encode(problem.answers)}`;
+}
+
 function installClassicCollection() {
-  const classics = (window.CLASSIC_PROBLEMS || []).map(adaptClassicProblem).filter(Boolean);
-  if (classics.length !== 600) {
+  const seen = new Set();
+  const classics = (window.CLASSIC_PROBLEMS || []).map(adaptClassicProblem).filter(problem => {
+    if (!problem || !isLegalFirstMove(problem)) return false;
+    const signature = positionSignature(problem);
+    if (seen.has(signature)) return false;
+    seen.add(signature);
+    return true;
+  });
+  if (classics.length < 500) {
     sourceNote.textContent = "内置题库文件不完整，请刷新页面。";
     return;
   }
   problems.push(...classics);
-  current = Math.min(current, problems.length - 1);
+  current = Math.min(Math.max(current, 0), problems.length - 1);
   render();
 }
 
