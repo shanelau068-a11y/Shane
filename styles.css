@@ -2,24 +2,24 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 button { font: inherit; cursor: pointer; }
-.app-shell { width: min(100%, 680px); min-height: 100vh; margin: 0 auto; padding: 28px 20px 40px; }
+.app-shell { width: min(100%, 680px); min-height: 100vh; margin: 0 auto; padding: 22px 20px 30px; }
 header, .progress-copy, .hint-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 h1 { margin: 2px 0 0; font-size: clamp(28px, 6vw, 38px); letter-spacing: .03em; }
 .eyebrow { margin: 0; color: #94704a; font-size: 14px; }
 .text-button { border: 0; background: transparent; color: #8a6240; text-decoration: underline; padding: 8px 0; white-space: nowrap; }
-.mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 22px 0 10px; padding: 5px; background: #ead7bb; border-radius: 15px; }
+.header-actions { display: flex; align-items: center; gap: 14px; }
+.header-actions #go-sound-toggle { border: 1px solid #dfc29a; border-radius: 99px; background: #fffaf1; color: #765033; padding: 6px 10px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0 8px; padding: 5px; background: #ead7bb; border-radius: 15px; }
 .mode-switch button { border: 0; border-radius: 11px; padding: 11px; background: transparent; color: #79583c; font-weight: 800; }
 .mode-switch button.active { background: #fffaf1; color: #b75a24; box-shadow: 0 3px 10px #6b3d1820; }
-.quick-tools { display: flex; justify-content: flex-end; margin: 0 2px 8px; }
-.quick-tools button { border: 1px solid #dfc29a; border-radius: 99px; background: #fffaf1; color: #765033; padding: 7px 12px; font-size: 13px; font-weight: 700; }
 .progress-card, .tip-card { background: #fff; border-radius: 18px; padding: 16px 18px; box-shadow: 0 5px 18px #7d54251c; }
-.progress-card { margin: 24px 0; }
+.progress-card { margin: 16px 0; }
 .progress-copy strong { color: #c1781e; }
 .progress-track { height: 10px; border-radius: 99px; background: #f1dfc5; overflow: hidden; margin-top: 11px; }
 #progress-bar { height: 100%; width: 12.5%; background: linear-gradient(90deg, #f0aa41, #e27a31); border-radius: inherit; transition: width .3s ease; }
-.lesson { text-align: center; margin: 28px auto 20px; }
+.lesson { text-align: center; margin: 20px auto 16px; }
 .tag { display: inline-block; padding: 6px 11px; border-radius: 99px; background: #ffe7aa; color: #895719; font-size: 14px; font-weight: 700; }
-h2 { margin: 12px 0 7px; font-size: 26px; }
+h2 { margin: 10px 0 5px; font-size: 24px; }
 .lesson p { max-width: 440px; margin: auto; color: #665244; line-height: 1.6; }
 .board-wrap { display: flex; justify-content: center; }
 .board { --size: min(82vw, 510px); width: var(--size); height: var(--size); display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr); padding: calc(var(--size) / 18); background: #deb36b; border: 10px solid #9c6635; border-radius: 5px; box-shadow: 0 10px 22px #5533123b; }
@@ -37,7 +37,7 @@ h2 { margin: 12px 0 7px; font-size: 26px; }
 .board.ai-board .point.last-ai::before { content: ""; position: absolute; z-index: 3; width: 22%; height: 22%; left: 39%; top: 39%; border-radius: 50%; background: #e04b32; box-shadow: 0 0 0 2px #fff8; }
 .board.ai-board .point.last-human::before { content: ""; position: absolute; z-index: 3; width: 20%; height: 20%; left: 40%; top: 40%; border-radius: 50%; border: 2px solid #e04b32; }
 .board.ai-board .hoshi { position: absolute; z-index: 1; width: 12%; height: 12%; left: 44%; top: 44%; border-radius: 50%; background: #6f4828; pointer-events: none; }
-.hint-row { margin: 22px auto 10px; max-width: 510px; }
+.hint-row { margin: 16px auto 8px; max-width: 510px; }
 .primary-button, .secondary-button { border-radius: 12px; padding: 12px 17px; font-weight: 700; border: 0; }
 .primary-button { background: #d9672c; color: #fff; box-shadow: 0 3px 0 #a94a1c; }
 .primary-button:disabled { background: #d5c6b8; box-shadow: none; cursor: default; }
@@ -49,9 +49,10 @@ h2 { margin: 12px 0 7px; font-size: 26px; }
 .message { min-height: 26px; text-align: center; color: #725945; font-weight: 700; }
 .message.success { color: #17703c; }
 .message.error { color: #b33c2e; }
-.tip-card { margin-top: 22px; border-left: 5px solid #edb14c; }
+.tip-card { margin-top: 14px; border-left: 5px solid #edb14c; }
 .tip-card h3 { margin: 0 0 7px; font-size: 17px; }
 .tip-card p { margin: 0; color: #705c4e; line-height: 1.65; }
-.source-note { margin: 14px 6px 0; color: #8b755f; font-size: 12px; line-height: 1.5; text-align: center; }
+.source-note { display: none; }
 .hidden { display: none !important; }
-@media (max-width: 390px) { .app-shell { padding: 20px 14px 32px; } .board { border-width: 7px; } }
+@media (max-width: 500px) { .header-actions { gap: 9px; } .header-actions #go-sound-toggle { padding: 5px 8px; font-size: 12px; } }
+@media (max-width: 390px) { .app-shell { padding: 18px 14px 28px; } .board { border-width: 7px; } .header-actions { gap: 7px; } }

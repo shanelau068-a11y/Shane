@@ -14,17 +14,16 @@
           <p class="eyebrow">每天一题，棋力进步一点点</p>
           <h1>语齐专用围棋</h1>
         </div>
-        <button class="text-button" id="reset-progress" type="button">重新开始</button>
+        <div class="header-actions">
+          <button id="go-sound-toggle" type="button" aria-pressed="true">🔊 声音开</button>
+          <button class="text-button" id="reset-progress" type="button">重新开始</button>
+        </div>
       </header>
 
       <nav class="mode-switch" aria-label="练习模式">
         <button id="puzzle-mode" class="active" type="button">闯关题库</button>
         <button id="ai-mode" type="button">人机对弈</button>
       </nav>
-
-      <div class="quick-tools">
-        <button id="go-sound-toggle" type="button" aria-pressed="true">🔊 声音开</button>
-      </div>
 
       <section id="progress-card" class="progress-card" aria-label="闯关进度">
         <div class="progress-copy"><span id="progress-label">第 1 / 8 关</span><strong id="stars">⭐ 0</strong></div>
@@ -65,11 +64,11 @@
       <p id="ai-game-info" class="ai-game-info hidden"></p>
       <p id="message" class="message" aria-live="assertive">请选择一个交叉点落子。</p>
 
+      <p id="source-note" class="source-note">题目：自编入门练习</p>
       <section class="tip-card">
         <h3>本关小知识</h3>
         <p id="tip-text">棋子上下左右相邻的空点叫作“气”。没有气的棋子会被提走。</p>
       </section>
-      <p id="source-note" class="source-note">题目：自编入门练习</p>
     </main>
     <script src="classic-batch-1.js"></script>
     <script src="classic-batch-2.js"></script>
