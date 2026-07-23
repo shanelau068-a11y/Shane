@@ -15,6 +15,8 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 
 The local Go rules and Monte Carlo Tree Search implementation in `go-ai.js` is adapted from [NakliTechie/KoLocal](https://github.com/NakliTechie/KoLocal), Copyright (c) 2026 NakliTechie, under the MIT License. The interface, persistence, sound, Chinese copy, search settings, and integration were adapted for this project.
 
+Human-vs-computer play uses the browser port [dna2ai/gnugo.js](https://github.com/dna2ai/gnugo.js), which embeds GNU Go. GNU Go is distributed under the GNU General Public License; the corresponding license text is included in `COPYING-GNUGO.txt`. The existing JavaScript engine in `go-ai.js` remains as a fallback if the enhanced engine cannot be loaded.
+
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.

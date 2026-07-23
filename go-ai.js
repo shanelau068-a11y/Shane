@@ -105,10 +105,10 @@ class GoGame {
     game.captures={...this.captures};game.passes=this.passes;game.gameOver=this.gameOver;game.moveNumber=this.moveNumber;
     game.lastMove=this.lastMove?{...this.lastMove}:null;game.boardHistory=new Set([game.getBoardHash()]);return game;
   }
-  toState(){return{size:this.size,komi:this.komi,board:this.board,currentPlayer:this.currentPlayer,moveNumber:this.moveNumber,captures:this.captures,lastMove:this.lastMove,passes:this.passes,gameOver:this.gameOver,boardHistory:[...this.boardHistory]};}
+  toState(){return{size:this.size,komi:this.komi,board:this.board,currentPlayer:this.currentPlayer,moveNumber:this.moveNumber,captures:this.captures,lastMove:this.lastMove,passes:this.passes,gameOver:this.gameOver,moveHistory:this.moveHistory,boardHistory:[...this.boardHistory]};}
   static fromState(state){
     const game=new GoGame(state.size,state.komi);game.board=state.board;game.currentPlayer=state.currentPlayer;game.moveNumber=state.moveNumber||0;
-    game.captures=state.captures||{black:0,white:0};game.lastMove=state.lastMove||null;game.passes=state.passes||0;game.gameOver=!!state.gameOver;
+    game.captures=state.captures||{black:0,white:0};game.lastMove=state.lastMove||null;game.passes=state.passes||0;game.gameOver=!!state.gameOver;game.moveHistory=state.moveHistory||[];
     game.boardHistory=new Set(state.boardHistory||[game.getBoardHash()]);return game;
   }
 }
@@ -236,8 +236,9 @@ if(typeof window!=='undefined')window.QiqiGoEngine={GoGame,FastBoard,GoMCTS};
 if(typeof document!=='undefined')(()=>{
   const $=id=>document.getElementById(id),boardEl=$('board'),message=$('message');
   let mode='puzzle',game=null,thinking=false,searchToken=0;
+  let gnuGoWorker=null,gnuGoRequestId=0;
   let soundOn=localStorage.getItem('qiqi-go-sound')!=='off',audio=null;
-  const savedKey='qiqi-go-ai-game';
+  const savedKey='qiqi-go-ai-game-v2';
   function audioContext(){if(!soundOn)return null;const AudioClass=window.AudioContext||window.webkitAudioContext;if(!AudioClass)return null;if(!audio)audio=new AudioClass();if(audio.state==='suspended')audio.resume();return audio;}
   function beep(freq,start,duration,type='sine',volume=.045){const a=audioContext();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(volume,a.currentTime+start);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+start+duration);o.connect(g).connect(a.destination);o.start(a.currentTime+start);o.stop(a.currentTime+start+duration);}
   function sound(kind){if(kind==='capture'){beep(190,0,.1,'square',.06);beep(125,.06,.14,'triangle',.04);}else if(kind==='finish'){[440,554,659,880].forEach((f,i)=>beep(f,i*.09,.18));}else{beep(500,0,.055,'triangle');beep(360,.045,.07,'triangle',.035);}}
@@ -245,6 +246,20 @@ if(typeof document!=='undefined')(()=>{
   function save(){if(game)localStorage.setItem(savedKey,JSON.stringify(game.toState()));}
   function load(size){try{const state=JSON.parse(localStorage.getItem(savedKey)||'null');return state&&state.size===size?GoGame.fromState(state):null;}catch{return null;}}
   function coord(x,y){const letters='ABCDEFGHJKLMNOPQRST';return`${letters[x]}${game.size-y}`;}
+  function gnuGoMove(){
+    if(game.moveHistory.some(move=>move.pass))return Promise.resolve(null);
+    if(!gnuGoWorker)gnuGoWorker=new Worker('gnugo-worker.js');
+    return new Promise((resolve,reject)=>{
+      const id=++gnuGoRequestId;
+      const receive=event=>{
+        if(event.data.id!==id)return;
+        gnuGoWorker.removeEventListener('message',receive);
+        if(event.data.error)reject(new Error(event.data.error));else resolve(event.data.move);
+      };
+      gnuGoWorker.addEventListener('message',receive);
+      gnuGoWorker.postMessage({id,size:game.size,komi:game.komi,moves:game.moveHistory});
+    });
+  }
   function showScore(){const score=game.calculateScore(),winner=score.winner==='black'?'齐齐（黑棋）':'电脑（白棋）';message.className=`message ${score.winner==='black'?'success':'error'}`;message.textContent=`终局：${winner}胜 ${score.margin.toFixed(1)} 目。黑 ${score.black.toFixed(1)}，白 ${score.white.toFixed(1)}。`;sound('finish');}
   function renderGame(){
     boardEl.innerHTML='';boardEl.classList.add('ai-board');boardEl.classList.toggle('large-board',game.size>9);boardEl.style.gridTemplateColumns=`repeat(${game.size},1fr)`;boardEl.style.gridTemplateRows=`repeat(${game.size},1fr)`;
@@ -260,12 +275,15 @@ if(typeof document!=='undefined')(()=>{
     const last=game.lastMove?`${game.lastMove.color==='white'?'电脑':'齐齐'}刚下在 ${coord(game.lastMove.x,game.lastMove.y)}`:'尚未落子';
     $('ai-game-info').textContent=`黑提子 ${game.captures.black} · 白提子 ${game.captures.white} · ${last}`;
     $('level-tag').textContent=`人机对弈 · ${game.size} 路棋盘`;$('problem-title').textContent=game.gameOver?'本局结束':thinking?'电脑正在思考…':'齐齐执黑棋';
-    $('problem-text').textContent='红色圆点标出刚才的一手；双方连续停一手后数目。';$('tip-text').textContent='电脑会优先处理提子、打吃和被攻击的弱棋，再用两层战术搜索选择能承受反击的一手。';$('source-note').textContent='本地战术搜索围棋引擎，不连接外部服务。';
+    $('problem-text').textContent='红色圆点标出刚才的一手；双方连续停一手后数目。';$('tip-text').textContent='电脑使用 GNU Go 增强引擎，会综合判断布局、攻防、死活、连接、断点和地盘。';$('source-note').textContent='GNU Go 浏览器增强引擎；首次进入人机模式时按需加载。';
   }
   async function computerMove(){
-    if(mode!=='ai'||game.gameOver||game.currentPlayer!=='white')return;thinking=true;const token=++searchToken;message.className='message';message.textContent='电脑正在认真计算，请稍等…';renderGame();
-    const base=Number($('go-ai-level').value),playouts=game.size===13?Math.round(base*.65):base,ai=new GoMCTS(playouts,()=>token!==searchToken||mode!=='ai');
-    const move=await ai.search(game);if(token!==searchToken||mode!=='ai'||!move)return;thinking=false;
+    if(mode!=='ai'||game.gameOver||game.currentPlayer!=='white')return;thinking=true;const token=++searchToken;message.className='message';message.textContent=gnuGoWorker?'增强引擎正在计算…':'首次加载增强引擎，请稍等…';renderGame();
+    let move=null;
+    try{move=await gnuGoMove();}
+    catch(error){console.warn(error);}
+    if(!move){const ai=new GoMCTS(game.size===13?3250:5000,()=>token!==searchToken||mode!=='ai');move=await ai.search(game);}
+    if(token!==searchToken||mode!=='ai'||!move)return;thinking=false;
     if(move.pass){const result=game.pass();message.textContent='电脑选择停一手。';if(result.gameOver){save();renderGame();showScore();return;}}
     else{const result=game.play(move.x,move.y);sound(result.captured?'capture':'move');message.className='message';message.textContent=`电脑下在 ${coord(move.x,move.y)}${result.captured?`，提掉 ${result.captured} 子`:''}。轮到齐齐。`;}
     save();renderGame();
