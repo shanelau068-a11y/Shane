@@ -238,7 +238,8 @@ if(typeof document!=='undefined')(()=>{
   let mode='puzzle',game=null,thinking=false,searchToken=0;
   let gnuGoWorker=null,gnuGoRequestId=0;
   let kataGoWorker=null,kataGoInit=null,kataGoRequestId=0,kataGoBackend='',kataGoFailed=false,activeAi='katago';
-  const kataGoModelUrl=new URL('models/katago-b6.bin.gz',document.baseURI).href;
+  const kataGoModels={katago:'models/katago-b18.bin.gz','katago-lite':'models/katago-b6.bin.gz'};
+  function selectedKataGoModel(){return new URL(kataGoModels[$('go-ai-level').value]||kataGoModels.katago,document.baseURI).href;}
   let soundOn=localStorage.getItem('qiqi-go-sound')!=='off',audio=null;
   const savedKey='qiqi-go-ai-game-v2';
   function audioContext(){if(!soundOn)return null;const AudioClass=window.AudioContext||window.webkitAudioContext;if(!AudioClass)return null;if(!audio)audio=new AudioClass();if(audio.state==='suspended')audio.resume();return audio;}
@@ -275,12 +276,12 @@ if(typeof document!=='undefined')(()=>{
       kataGoWorker.addEventListener('message',receive);kataGoWorker.addEventListener('error',failed);
     });
   }
-  function ensureKataGo(){
+  function ensureKataGo(modelUrl){
     if(kataGoInit)return kataGoInit;
     if(!kataGoWorker)kataGoWorker=new Worker('katago-worker.js');
     kataGoInit=(async()=>{
-      const responsePromise=waitForKataGo(data=>data.type==='katago:init_result',60000);
-      kataGoWorker.postMessage({type:'katago:init',modelUrl:kataGoModelUrl,backend:'webgpu'});
+      const responsePromise=waitForKataGo(data=>data.type==='katago:init_result',modelUrl.includes('b18')?120000:60000);
+      kataGoWorker.postMessage({type:'katago:init',modelUrl,backend:'webgpu'});
       const response=await responsePromise;
       if(!response.ok)throw new Error(response.error||'KataGo 初始化失败');
       kataGoBackend=response.backend||'神经网络';
@@ -296,11 +297,12 @@ if(typeof document!=='undefined')(()=>{
     return{previousBoard:boards.at(-2),previousPreviousBoard:boards.at(-3)};
   }
   async function kataGoMove(){
-    await ensureKataGo();
+    const modelUrl=selectedKataGoModel();
+    await ensureKataGo(modelUrl);
     const id=++kataGoRequestId,{previousBoard,previousPreviousBoard}=replayBoards();
     const responsePromise=waitForKataGo(data=>data.type==='katago:analyze_result'&&data.id===id,20000);
     kataGoWorker.postMessage({
-      type:'katago:analyze',id,analysisGroup:'interactive',modelUrl:kataGoModelUrl,backend:'webgpu',
+      type:'katago:analyze',id,analysisGroup:'interactive',modelUrl,backend:'webgpu',
       board:game.board.map(row=>row.slice()),previousBoard,previousPreviousBoard,
       currentPlayer:game.currentPlayer,
       moveHistory:game.moveHistory.slice(-5).map(move=>({x:move.pass?-1:move.x,y:move.pass?-1:move.y,player:move.color})),
@@ -331,12 +333,12 @@ if(typeof document!=='undefined')(()=>{
     $('ai-game-info').textContent=`黑提子 ${game.captures.black} · 白提子 ${game.captures.white} · ${last}`;
     $('level-tag').textContent=`人机对弈 · ${game.size} 路棋盘`;$('problem-title').textContent=game.gameOver?'本局结束':thinking?'电脑正在思考…':'齐齐执黑棋';
     $('problem-text').textContent='红色圆点标出刚才的一手；双方连续停一手后数目。';
-    const usingKata=$('go-ai-level').value==='katago'&&activeAi==='katago';
-    $('tip-text').textContent=usingKata?'电脑使用 KataGo 神经网络和蒙特卡洛搜索，会同时判断全盘胜率、攻防、死活和地盘，不再只是把棋连成一串。':'当前使用 GNU Go 兼容引擎；设备无法运行神经网络时会自动切换到这里。';
-    $('source-note').textContent=usingKata?`KataGo 神经网络引擎${kataGoBackend?` · ${kataGoBackend.toUpperCase()}`:''}；模型已随网页提供，首次加载后可缓存。`:'GNU Go 浏览器兼容引擎。';
+    const selectedLevel=$('go-ai-level').value,usingKata=selectedLevel.startsWith('katago')&&activeAi.startsWith('katago'),usingStrong=selectedLevel==='katago';
+    $('tip-text').textContent=usingKata?(usingStrong?'电脑使用 KataGo b18 强力神经网络和蒙特卡洛搜索，会判断全盘胜率、攻防、死活和地盘。首次约下载 96MB，之后浏览器会缓存。':'当前使用 3.8MB 轻量神经网络，适合内存较小或加载较慢的设备；棋力低于 b18 强力模式。'):'当前使用 GNU Go 兼容引擎；设备无法运行神经网络时会自动切换到这里。';
+    $('source-note').textContent=usingKata?`KataGo ${usingStrong?'b18 强力':'b6 轻量'}神经网络${kataGoBackend?` · ${kataGoBackend.toUpperCase()}`:''}；模型已随网页提供。`:'GNU Go 浏览器兼容引擎。';
   }
   async function computerMove(){
-    if(mode!=='ai'||game.gameOver||game.currentPlayer!=='white')return;thinking=true;const token=++searchToken,level=$('go-ai-level').value,wantsKata=level==='katago'&&!kataGoFailed;activeAi=wantsKata?'katago':'gnugo';message.className='message';message.textContent=wantsKata?(kataGoInit?'KataGo 正在认真思考…':'首次加载 KataGo 神经网络，请稍等…'):(gnuGoWorker?'GNU Go 正在计算…':'首次加载 GNU Go，请稍等…');renderGame();
+    if(mode!=='ai'||game.gameOver||game.currentPlayer!=='white')return;thinking=true;const token=++searchToken,level=$('go-ai-level').value,wantsKata=level.startsWith('katago')&&!kataGoFailed;activeAi=wantsKata?level:'gnugo';message.className='message';message.textContent=wantsKata?(kataGoInit?'KataGo 正在认真思考…':level==='katago'?'首次加载约 96MB 强力模型，请稍等…':'首次加载 3.8MB 轻量模型，请稍等…'):(gnuGoWorker?'GNU Go 正在计算…':'首次加载 GNU Go，请稍等…');renderGame();
     let move=null;
     if(wantsKata){
       try{move=await kataGoMove();}
@@ -365,7 +367,7 @@ if(typeof document!=='undefined')(()=>{
   $('ai-mode').addEventListener('click',()=>setMode('ai'));
   $('go-new-game').addEventListener('click',()=>{localStorage.removeItem(savedKey);newGame(false);});
   $('go-board-size').addEventListener('change',()=>{localStorage.removeItem(savedKey);newGame(false);});
-  $('go-ai-level').addEventListener('change',()=>{searchToken++;thinking=false;activeAi=$('go-ai-level').value;if(activeAi==='katago')kataGoFailed=false;message.className='message';message.textContent=activeAi==='katago'?'已切换 KataGo 神经网络，下一手启用。':'已切换 GNU Go 兼容模式。';renderGame();if(game.currentPlayer==='white'&&!game.gameOver)setTimeout(computerMove,160);});
+  $('go-ai-level').addEventListener('change',()=>{searchToken++;thinking=false;resetKataGo();activeAi=$('go-ai-level').value;if(activeAi.startsWith('katago'))kataGoFailed=false;message.className='message';message.textContent=activeAi==='katago'?'已切换 KataGo b18 强力模式，下一手启用。':activeAi==='katago-lite'?'已切换 KataGo b6 轻量模式。':'已切换 GNU Go 兼容模式。';renderGame();if(game.currentPlayer==='white'&&!game.gameOver)setTimeout(computerMove,160);});
   $('go-pass').addEventListener('click',()=>{if(mode!=='ai'||thinking||game.gameOver||game.currentPlayer!=='black')return;const result=game.pass();message.className='message';message.textContent='齐齐停一手。';save();renderGame();if(result.gameOver)showScore();else setTimeout(computerMove,160);});
   $('go-sound-toggle').addEventListener('click',()=>{soundOn=!soundOn;localStorage.setItem('qiqi-go-sound',soundOn?'on':'off');updateSound();if(soundOn)sound('move');});
   updateSound();
