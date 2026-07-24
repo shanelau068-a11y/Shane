@@ -237,6 +237,8 @@ if(typeof document!=='undefined')(()=>{
   const $=id=>document.getElementById(id),boardEl=$('board'),message=$('message');
   let mode='puzzle',game=null,thinking=false,searchToken=0;
   let gnuGoWorker=null,gnuGoRequestId=0;
+  let kataGoWorker=null,kataGoInit=null,kataGoRequestId=0,kataGoBackend='',kataGoFailed=false,activeAi='katago';
+  const kataGoModelUrl=new URL('models/katago-b6.bin.gz',document.baseURI).href;
   let soundOn=localStorage.getItem('qiqi-go-sound')!=='off',audio=null;
   const savedKey='qiqi-go-ai-game-v2';
   function audioContext(){if(!soundOn)return null;const AudioClass=window.AudioContext||window.webkitAudioContext;if(!AudioClass)return null;if(!audio)audio=new AudioClass();if(audio.state==='suspended')audio.resume();return audio;}
@@ -260,6 +262,59 @@ if(typeof document!=='undefined')(()=>{
       gnuGoWorker.postMessage({id,size:game.size,komi:game.komi,moves:game.moveHistory});
     });
   }
+  function resetKataGo(){
+    kataGoWorker?.terminate();kataGoWorker=null;kataGoInit=null;kataGoBackend='';
+  }
+  function waitForKataGo(match,timeoutMs){
+    return new Promise((resolve,reject)=>{
+      let timer;
+      const cleanup=()=>{clearTimeout(timer);kataGoWorker?.removeEventListener('message',receive);kataGoWorker?.removeEventListener('error',failed);};
+      const receive=event=>{if(!match(event.data))return;cleanup();resolve(event.data);};
+      const failed=event=>{cleanup();reject(new Error(event.message||'KataGo 工作线程启动失败'));};
+      timer=setTimeout(()=>{cleanup();reject(new Error('KataGo 计算超时'));},timeoutMs);
+      kataGoWorker.addEventListener('message',receive);kataGoWorker.addEventListener('error',failed);
+    });
+  }
+  function ensureKataGo(){
+    if(kataGoInit)return kataGoInit;
+    if(!kataGoWorker)kataGoWorker=new Worker('katago-worker.js');
+    kataGoInit=(async()=>{
+      const responsePromise=waitForKataGo(data=>data.type==='katago:init_result',60000);
+      kataGoWorker.postMessage({type:'katago:init',modelUrl:kataGoModelUrl,backend:'webgpu'});
+      const response=await responsePromise;
+      if(!response.ok)throw new Error(response.error||'KataGo 初始化失败');
+      kataGoBackend=response.backend||'神经网络';
+    })().catch(error=>{resetKataGo();throw error;});
+    return kataGoInit;
+  }
+  function replayBoards(){
+    const replay=new GoGame(game.size,game.komi),boards=[replay.board.map(row=>row.slice())];
+    for(const move of game.moveHistory){
+      if(move.pass)replay.pass();else replay.play(move.x,move.y);
+      boards.push(replay.board.map(row=>row.slice()));
+    }
+    return{previousBoard:boards.at(-2),previousPreviousBoard:boards.at(-3)};
+  }
+  async function kataGoMove(){
+    await ensureKataGo();
+    const id=++kataGoRequestId,{previousBoard,previousPreviousBoard}=replayBoards();
+    const responsePromise=waitForKataGo(data=>data.type==='katago:analyze_result'&&data.id===id,20000);
+    kataGoWorker.postMessage({
+      type:'katago:analyze',id,analysisGroup:'interactive',modelUrl:kataGoModelUrl,backend:'webgpu',
+      board:game.board.map(row=>row.slice()),previousBoard,previousPreviousBoard,
+      currentPlayer:game.currentPlayer,
+      moveHistory:game.moveHistory.slice(-5).map(move=>({x:move.pass?-1:move.x,y:move.pass?-1:move.y,player:move.color})),
+      komi:game.komi,rules:'chinese',topK:5,analysisPvLen:8,includeMovesOwnership:false,
+      wideRootNoise:0,nnRandomize:false,conservativePass:true,
+      visits:game.size===13?320:384,maxTimeMs:game.size===13?2500:1800,batchSize:8,maxChildren:64,
+      reuseTree:false,ownershipMode:'none'
+    });
+    const response=await responsePromise;
+    if(!response.ok||!response.analysis)throw new Error(response.error||'KataGo 分析失败');
+    kataGoBackend=response.backend||kataGoBackend;
+    const best=response.analysis.moves.find(candidate=>candidate.x<0||game.canPlay(candidate.x,candidate.y));
+    return best?(best.x<0?{pass:true}:{x:best.x,y:best.y}):null;
+  }
   function showScore(){const score=game.calculateScore(),winner=score.winner==='black'?'齐齐（黑棋）':'电脑（白棋）';message.className=`message ${score.winner==='black'?'success':'error'}`;message.textContent=`终局：${winner}胜 ${score.margin.toFixed(1)} 目。黑 ${score.black.toFixed(1)}，白 ${score.white.toFixed(1)}。`;sound('finish');}
   function renderGame(){
     boardEl.innerHTML='';boardEl.classList.add('ai-board');boardEl.classList.toggle('large-board',game.size>9);boardEl.style.gridTemplateColumns=`repeat(${game.size},1fr)`;boardEl.style.gridTemplateRows=`repeat(${game.size},1fr)`;
@@ -275,13 +330,19 @@ if(typeof document!=='undefined')(()=>{
     const last=game.lastMove?`${game.lastMove.color==='white'?'电脑':'齐齐'}刚下在 ${coord(game.lastMove.x,game.lastMove.y)}`:'尚未落子';
     $('ai-game-info').textContent=`黑提子 ${game.captures.black} · 白提子 ${game.captures.white} · ${last}`;
     $('level-tag').textContent=`人机对弈 · ${game.size} 路棋盘`;$('problem-title').textContent=game.gameOver?'本局结束':thinking?'电脑正在思考…':'齐齐执黑棋';
-    $('problem-text').textContent='红色圆点标出刚才的一手；双方连续停一手后数目。';$('tip-text').textContent='电脑使用 GNU Go 增强引擎，会综合判断布局、攻防、死活、连接、断点和地盘。';$('source-note').textContent='GNU Go 浏览器增强引擎；首次进入人机模式时按需加载。';
+    $('problem-text').textContent='红色圆点标出刚才的一手；双方连续停一手后数目。';
+    const usingKata=$('go-ai-level').value==='katago'&&activeAi==='katago';
+    $('tip-text').textContent=usingKata?'电脑使用 KataGo 神经网络和蒙特卡洛搜索，会同时判断全盘胜率、攻防、死活和地盘，不再只是把棋连成一串。':'当前使用 GNU Go 兼容引擎；设备无法运行神经网络时会自动切换到这里。';
+    $('source-note').textContent=usingKata?`KataGo 神经网络引擎${kataGoBackend?` · ${kataGoBackend.toUpperCase()}`:''}；模型已随网页提供，首次加载后可缓存。`:'GNU Go 浏览器兼容引擎。';
   }
   async function computerMove(){
-    if(mode!=='ai'||game.gameOver||game.currentPlayer!=='white')return;thinking=true;const token=++searchToken;message.className='message';message.textContent=gnuGoWorker?'增强引擎正在计算…':'首次加载增强引擎，请稍等…';renderGame();
+    if(mode!=='ai'||game.gameOver||game.currentPlayer!=='white')return;thinking=true;const token=++searchToken,level=$('go-ai-level').value,wantsKata=level==='katago'&&!kataGoFailed;activeAi=wantsKata?'katago':'gnugo';message.className='message';message.textContent=wantsKata?(kataGoInit?'KataGo 正在认真思考…':'首次加载 KataGo 神经网络，请稍等…'):(gnuGoWorker?'GNU Go 正在计算…':'首次加载 GNU Go，请稍等…');renderGame();
     let move=null;
-    try{move=await gnuGoMove();}
-    catch(error){console.warn(error);}
+    if(wantsKata){
+      try{move=await kataGoMove();}
+      catch(error){console.warn('KataGo unavailable, falling back to GNU Go:',error);kataGoFailed=true;activeAi='gnugo';message.textContent='这台设备暂时无法运行 KataGo，已自动切换兼容引擎…';}
+    }
+    if(!move)try{move=await gnuGoMove();activeAi='gnugo';}catch(error){console.warn(error);}
     if(!move){const ai=new GoMCTS(game.size===13?3250:5000,()=>token!==searchToken||mode!=='ai');move=await ai.search(game);}
     if(token!==searchToken||mode!=='ai'||!move)return;thinking=false;
     if(move.pass){const result=game.pass();message.textContent='电脑选择停一手。';if(result.gameOver){save();renderGame();showScore();return;}}
@@ -304,6 +365,7 @@ if(typeof document!=='undefined')(()=>{
   $('ai-mode').addEventListener('click',()=>setMode('ai'));
   $('go-new-game').addEventListener('click',()=>{localStorage.removeItem(savedKey);newGame(false);});
   $('go-board-size').addEventListener('change',()=>{localStorage.removeItem(savedKey);newGame(false);});
+  $('go-ai-level').addEventListener('change',()=>{searchToken++;thinking=false;activeAi=$('go-ai-level').value;if(activeAi==='katago')kataGoFailed=false;message.className='message';message.textContent=activeAi==='katago'?'已切换 KataGo 神经网络，下一手启用。':'已切换 GNU Go 兼容模式。';renderGame();if(game.currentPlayer==='white'&&!game.gameOver)setTimeout(computerMove,160);});
   $('go-pass').addEventListener('click',()=>{if(mode!=='ai'||thinking||game.gameOver||game.currentPlayer!=='black')return;const result=game.pass();message.className='message';message.textContent='齐齐停一手。';save();renderGame();if(result.gameOver)showScore();else setTimeout(computerMove,160);});
   $('go-sound-toggle').addEventListener('click',()=>{soundOn=!soundOn;localStorage.setItem('qiqi-go-sound',soundOn?'on':'off');updateSound();if(soundOn)sound('move');});
   updateSound();

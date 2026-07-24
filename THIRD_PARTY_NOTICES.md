@@ -17,6 +17,8 @@ The local Go rules and Monte Carlo Tree Search implementation in `go-ai.js` is a
 
 Human-vs-computer play uses the browser port [dna2ai/gnugo.js](https://github.com/dna2ai/gnugo.js), which embeds GNU Go. GNU Go is distributed under the GNU General Public License; the corresponding license text is included in `COPYING-GNUGO.txt`. The existing JavaScript engine in `go-ai.js` remains as a fallback if the enhanced engine cannot be loaded.
 
+The primary human-vs-computer mode uses the browser-native neural-network and MCTS implementation from [Sir-Teo/web-katrain](https://github.com/Sir-Teo/web-katrain), Copyright (c) 2026 Web KatRain Contributors, under the MIT License. Its license is included in `LICENSE-WEB-KATRAIN.txt`. The bundled `g170-b6c96-s175395328-d26788732` KataGo network is one of the oldest imported `g170` networks and is released under CC0, as documented by the [KataGo neural network license](https://katagotraining.org/network_license/).
+
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
