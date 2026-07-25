@@ -237,9 +237,9 @@ if(typeof document!=='undefined')(()=>{
   const $=id=>document.getElementById(id),boardEl=$('board'),message=$('message');
   let mode='puzzle',game=null,thinking=false,searchToken=0;
   let gnuGoWorker=null,gnuGoRequestId=0;
-  let kataGoWorker=null,kataGoInit=null,kataGoRequestId=0,kataGoBackend='',kataGoFailed=false,activeAi='katago';
+  let kataGoWorker=null,kataGoInit=null,kataGoRequestId=0,kataGoBackend='',kataGoFailed=false,activeAi='katago-lite';
   const kataGoModels={katago:'models/katago-b18.bin.gz','katago-lite':'models/katago-b6.bin.gz'};
-  function selectedKataGoModel(){return new URL(kataGoModels[$('go-ai-level').value]||kataGoModels.katago,document.baseURI).href;}
+  function selectedKataGoModel(){return new URL(kataGoModels[$('go-ai-level').value]||kataGoModels['katago-lite'],document.baseURI).href;}
   let soundOn=localStorage.getItem('qiqi-go-sound')!=='off',audio=null;
   const savedKey='qiqi-go-ai-game-v2';
   function audioContext(){if(!soundOn)return null;const AudioClass=window.AudioContext||window.webkitAudioContext;if(!AudioClass)return null;if(!audio)audio=new AudioClass();if(audio.state==='suspended')audio.resume();return audio;}
@@ -298,6 +298,7 @@ if(typeof document!=='undefined')(()=>{
   }
   async function kataGoMove(){
     const modelUrl=selectedKataGoModel();
+    const usingLite=$('go-ai-level').value==='katago-lite';
     await ensureKataGo(modelUrl);
     const id=++kataGoRequestId,{previousBoard,previousPreviousBoard}=replayBoards();
     const responsePromise=waitForKataGo(data=>data.type==='katago:analyze_result'&&data.id===id,20000);
@@ -308,7 +309,8 @@ if(typeof document!=='undefined')(()=>{
       moveHistory:game.moveHistory.slice(-5).map(move=>({x:move.pass?-1:move.x,y:move.pass?-1:move.y,player:move.color})),
       komi:game.komi,rules:'chinese',topK:5,analysisPvLen:8,includeMovesOwnership:false,
       wideRootNoise:0,nnRandomize:false,conservativePass:true,
-      visits:game.size===13?320:384,maxTimeMs:game.size===13?2500:1800,batchSize:8,maxChildren:64,
+      visits:usingLite?(game.size===13?640:768):(game.size===13?320:384),
+      maxTimeMs:usingLite?(game.size===13?3200:2400):(game.size===13?2500:1800),batchSize:8,maxChildren:64,
       reuseTree:false,ownershipMode:'none'
     });
     const response=await responsePromise;
@@ -334,7 +336,7 @@ if(typeof document!=='undefined')(()=>{
     $('level-tag').textContent=`人机对弈 · ${game.size} 路棋盘`;$('problem-title').textContent=game.gameOver?'本局结束':thinking?'电脑正在思考…':'齐齐执黑棋';
     $('problem-text').textContent='红色圆点标出刚才的一手；双方连续停一手后数目。';
     const selectedLevel=$('go-ai-level').value,usingKata=selectedLevel.startsWith('katago')&&activeAi.startsWith('katago'),usingStrong=selectedLevel==='katago';
-    $('tip-text').textContent=usingKata?(usingStrong?'电脑使用 KataGo b18 强力神经网络和蒙特卡洛搜索，会判断全盘胜率、攻防、死活和地盘。首次约下载 96MB，之后浏览器会缓存。':'当前使用 3.8MB 轻量神经网络，适合内存较小或加载较慢的设备；棋力低于 b18 强力模式。'):'当前使用 GNU Go 兼容引擎；设备无法运行神经网络时会自动切换到这里。';
+    $('tip-text').textContent=usingKata?(usingStrong?'电脑使用 KataGo b18 大模型和蒙特卡洛搜索，会判断全盘胜率、攻防、死活和地盘。首次约下载 96MB，之后浏览器会缓存。':'默认使用 3.8MB B6 神经网络，并增加搜索次数；加载更快，也会认真计算攻防、死活和地盘。'):'当前使用 GNU Go 兼容引擎；设备无法运行神经网络时会自动切换到这里。';
     $('source-note').textContent=usingKata?`KataGo ${usingStrong?'b18 强力':'b6 轻量'}神经网络${kataGoBackend?` · ${kataGoBackend.toUpperCase()}`:''}；模型已随网页提供。`:'GNU Go 浏览器兼容引擎。';
   }
   async function computerMove(){
