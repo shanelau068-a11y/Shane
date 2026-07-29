@@ -72,8 +72,6 @@ function render() {
   el("problem-title").textContent = p.title;
   el("problem-text").textContent = p.text;
   el("tip-text").textContent = p.tip;
-  el("tip-card").classList.add("hidden");
-  el("hint-button").textContent = "💡 看提示";
   sourceNote.textContent = p.source || "题目：自编入门练习";
   el("progress-label").textContent = `第 ${current + 1} / ${problems.length} 关`;
   el("stars").textContent = `⭐ ${solved.size}`;
@@ -107,13 +105,7 @@ function choose(pos, cell) {
     el("progress-bar").style.width = `${(solved.size / problems.length) * 100}%`;
   } else { message.className = "message error"; message.textContent = "再想一想：先数一数每一块棋还有几口气。"; }
 }
-el("hint-button").addEventListener("click", () => {
-  const tipCard = el("tip-card");
-  const isHidden = tipCard.classList.toggle("hidden");
-  el("hint-button").textContent = isHidden ? "💡 看提示" : "收起提示";
-  message.className = "message";
-  message.textContent = "";
-});
+el("hint-button").addEventListener("click", () => { const a = problems[current].answers[0]; message.className = "message"; message.textContent = `提示：试试第 ${a[0] + 1} 列、第 ${a[1] + 1} 行的交叉点。`; });
 next.addEventListener("click", () => { current = (current + 1) % problems.length; localStorage.setItem("go-kids-level", String(current)); render(); });
 el("reset-progress").addEventListener("click", () => { if (confirm("确定重新开始吗？闯关星星会清零。")) { solved = new Set(); current = 0; localStorage.removeItem("go-kids-solved"); localStorage.setItem("go-kids-level", "0"); render(); } });
 function sourcePoint(point) {
